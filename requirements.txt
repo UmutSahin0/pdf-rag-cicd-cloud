@@ -1,0 +1,8 @@
+langchain
+redis
+PyPDF2
+langchain_community
+langchain_groq
+langchain_core
+langchain-huggingface
+pytest
