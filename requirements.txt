@@ -1,8 +1,13 @@
 langchain
-redis
+redis==4.6.0
 PyPDF2
 langchain_community
 langchain_groq
 langchain_core
 langchain-huggingface
 pytest
+fastapi
+uvicorn
+pypdf
+sentence-transformers
+python-dotenv

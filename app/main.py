@@ -9,9 +9,18 @@ from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_groq import ChatGroq
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 
 load_dotenv()
 groq_api_key = os.getenv("GROQ_API_KEY")
+
+app = FastAPI()
+chain = None
+
+
+class QuestionRequest(BaseModel):
+    question: str
 
 
 def connect_to_redis(url="redis://localhost:6379"):
@@ -75,11 +84,14 @@ def build_rag_chain(vectorstore, groq_api_key):
     return create_retrieval_chain(retriever, question_answer_chain)
 
 
-if __name__ == "__main__":
+@app.on_event("startup")
+def initialize():
+    global chain
+
     pdf_name = "my_pdf"
     redis_url = "redis://localhost:6379"
     index_name = f"{pdf_name}_index"
-    pdf_path = rf"..\data\{pdf_name}.pdf"
+    pdf_path = rf"data\{pdf_name}.pdf"
 
     client = connect_to_redis(redis_url)
     clear_index(client, index_name)
@@ -91,7 +103,15 @@ if __name__ == "__main__":
     vectorstore = create_vectorstore(chunks, embedding_model, redis_url, index_name)
 
     chain = build_rag_chain(vectorstore, groq_api_key)
-    result = chain.invoke({"input": "Umut Şahin kız arkadaşının ismi ne?"})
+    print("RAG zinciri hazır.")
 
-    print("-----" * 20)
-    print(result["answer"])
+
+@app.post("/ask")
+def ask_question(req: QuestionRequest):
+    global chain
+
+    if not chain:
+        raise HTTPException(status_code=500, detail="RAG zinciri başlatılamadı.")
+
+    result = chain.invoke({"input": req.question})
+    return {"answer": result["answer"]}
